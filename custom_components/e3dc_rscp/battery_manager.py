@@ -494,16 +494,21 @@ class E3DCBatteryManager:
 
         return pack.get(slug)
 
-    def _calculate_battery_soc_from_capacity(self, dcb: dict[str, Any]) -> float | None:
-        """Calculate SOC from remaining capacity and voltage if not directly available."""
+   def _calculate_battery_soc_from_capacity(self, dcb: dict[str, Any]) -> float | None:
+        """Calculate SOC from remaining capacity and full charge capacity."""
         remaining_capacity_raw = dcb.get("remainingCapacity")
-        voltage_raw = dcb.get("voltage")
+        full_charge_capacity_raw = dcb.get("fullChargeCapacity")
+
         try:
             remaining_capacity = float(remaining_capacity_raw)
-            voltage = float(voltage_raw)
+            full_charge_capacity = float(full_charge_capacity_raw)
         except (TypeError, ValueError):
             return None
-        return (remaining_capacity * voltage) / 1000
+
+        if full_charge_capacity <= 0:
+            return None
+
+        return (remaining_capacity / full_charge_capacity) * 100
 
     def _calculate_battery_soh_from_capacity(self, dcb: dict[str, Any]) -> float | None:
         """Calculate SOH from full charge capacity and design capacity if not directly available."""
