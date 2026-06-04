@@ -494,7 +494,7 @@ class E3DCBatteryManager:
 
         return pack.get(slug)
 
-   def _calculate_battery_soc_from_capacity(self, dcb: dict[str, Any]) -> float | None:
+    def _calculate_battery_soc_from_capacity(self, dcb: dict[str, Any]) -> float | None:
         """Calculate SOC from remaining capacity and full charge capacity."""
         remaining_capacity_raw = dcb.get("remainingCapacity")
         full_charge_capacity_raw = dcb.get("fullChargeCapacity")
