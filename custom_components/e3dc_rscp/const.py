@@ -16,6 +16,7 @@ ERROR_AUTH_INVALID = "invalid_auth"
 ERROR_CANNOT_CONNECT = "cannot_connect"
 CONF_CREATE_BATTERY_DEVICES = "create_battery_devices"
 DEFAULT_CREATE_BATTERY_DEVICES = False
+DEFAULT_BATTERY_MODULE_TEMPERATURE_SENSOR_COUNT = 5
 
 # Battery module sensors (all are raw sensors with data_key)
 BATTERY_MODULE_RAW_SENSORS: tuple[tuple[str, str], ...] = (
@@ -48,6 +49,9 @@ BATTERY_MODULE_RAW_SENSORS: tuple[tuple[str, str], ...] = (
 # Battery module calculated sensors (slug only)
 BATTERY_MODULE_CALCULATED_SENSORS: tuple[str, ...] = (
     "soh",  # Calculated SoH (always calculated from capacities)
+    "temperature-min",
+    "temperature-max",
+    "temperature-avg",
 )
 
 # Battery pack raw sensors (data_key, slug)

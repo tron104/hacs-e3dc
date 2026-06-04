@@ -33,6 +33,7 @@ from .const import (
     BATTERY_MODULE_CALCULATED_SENSORS,
     BATTERY_PACK_RAW_SENSORS,
     BATTERY_PACK_CALCULATED_SENSORS,
+    DEFAULT_BATTERY_MODULE_TEMPERATURE_SENSOR_COUNT,
     DOMAIN,
 )
 from .coordinator import E3DCCoordinator
@@ -569,6 +570,36 @@ BATTERY_SENSOR_DESCRIPTION_TEMPLATES: dict[str, dict[str, Any]] = {
         "entity_category": EntityCategory.DIAGNOSTIC,
         "entity_registry_enabled_default": False,
     },
+    "temperature-min": {
+        "translation_key": "battery-module-temperature-min",
+        "name": "Temperature Min",
+        "icon": "mdi:thermometer-low",
+        "native_unit_of_measurement": UnitOfTemperature.CELSIUS,
+        "device_class": SensorDeviceClass.TEMPERATURE,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "entity_category": EntityCategory.DIAGNOSTIC,
+        "suggested_display_precision": 1,
+    },
+    "temperature-max": {
+        "translation_key": "battery-module-temperature-max",
+        "name": "Temperature Max",
+        "icon": "mdi:thermometer-high",
+        "native_unit_of_measurement": UnitOfTemperature.CELSIUS,
+        "device_class": SensorDeviceClass.TEMPERATURE,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "entity_category": EntityCategory.DIAGNOSTIC,
+        "suggested_display_precision": 1,
+    },
+    "temperature-avg": {
+        "translation_key": "battery-module-temperature-avg",
+        "name": "Temperature Average",
+        "icon": "mdi:thermometer",
+        "native_unit_of_measurement": UnitOfTemperature.CELSIUS,
+        "device_class": SensorDeviceClass.TEMPERATURE,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "entity_category": EntityCategory.DIAGNOSTIC,
+        "suggested_display_precision": 1,
+    },
     "status": {
         "translation_key": "battery-module-status",
         "icon": "mdi:information-outline",
@@ -849,6 +880,16 @@ BATTERY_PACK_SENSOR_DESCRIPTION_TEMPLATES: dict[str, dict[str, Any]] = {
 }
 
 
+BATTERY_MODULE_CELL_TEMPERATURE_SENSOR_TEMPLATE: dict[str, dict[str, Any] | Any] = {
+    "icon": "mdi:thermometer",
+    "native_unit_of_measurement": UnitOfTemperature.CELSIUS,
+    "device_class": SensorDeviceClass.TEMPERATURE,
+    "state_class": SensorStateClass.MEASUREMENT,
+    "entity_category": EntityCategory.DIAGNOSTIC,
+    "suggested_display_precision": 1,
+}
+
+
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
@@ -1005,6 +1046,27 @@ async def async_setup_entry(
                 has_entity_name=True,
                 key=f"{battery_key}-{slug}",
                 **template,
+            )
+            entities.append(
+                E3DCSensor(
+                    coordinator,
+                    description,
+                    unique_id,
+                    battery["deviceInfo"],
+                )
+            )
+
+        # Create per-cell temperature sensors for this battery module
+        temperature_sensor_count = max(
+            battery.get("temperatureSensorCount", 0),
+            DEFAULT_BATTERY_MODULE_TEMPERATURE_SENSOR_COUNT,
+        )
+        for temperature_index in range(temperature_sensor_count):
+            description = E3DCSensorEntityDescription(
+                has_entity_name=True,
+                name=f"Cell Temperature {temperature_index + 1}",
+                key=f"{battery_key}-temperature-{temperature_index + 1}",
+                **BATTERY_MODULE_CELL_TEMPERATURE_SENSOR_TEMPLATE,
             )
             entities.append(
                 E3DCSensor(

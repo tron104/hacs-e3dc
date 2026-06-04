@@ -18,6 +18,7 @@ from .const import (
     BATTERY_MODULE_CALCULATED_SENSORS,
     BATTERY_PACK_RAW_SENSORS,
     BATTERY_PACK_CALCULATED_SENSORS,
+    DEFAULT_BATTERY_MODULE_TEMPERATURE_SENSOR_COUNT,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -31,6 +32,7 @@ class E3DCBattery(TypedDict):
     key: str
     deviceInfo: DeviceInfo
     hasDeviceReportedSoh: bool  # Whether device provides SoH value
+    temperatureSensorCount: int
 
 
 class E3DCBatteryPack(TypedDict):
@@ -73,6 +75,13 @@ class E3DCBatteryManager:
         self._battery_packs: list[E3DCBatteryPack] = []
         self._identify_lock = asyncio.Lock()
 
+    def _get_module_temperature_sensor_count(self, dcb: dict[str, Any]) -> int:
+        """Determine how many cell temperature sensors should be exposed for a module."""
+        raw_temperatures = dcb.get("temperatures")
+        if isinstance(raw_temperatures, (list, tuple)) and len(raw_temperatures) > 0:
+            return len(raw_temperatures)
+        return DEFAULT_BATTERY_MODULE_TEMPERATURE_SENSOR_COUNT
+
     @property
     def batteries(self) -> list[E3DCBattery]:
         """Get the list of identified battery modules."""
@@ -108,11 +117,10 @@ class E3DCBatteryManager:
         for device_id in devices_to_remove:
             device_registry.async_remove_device(device_id)
 
-        # Clear battery module data
+        # Clear battery module and pack data
         self._batteries.clear()
-        battery_key_prefix = "battery-"
         for key in list(self._mydata.keys()):
-            if key.startswith(battery_key_prefix):
+            if key.startswith("battery-") or key.startswith("battery-pack-"):
                 self._mydata.pop(key)
 
         # Clear battery pack data
@@ -251,6 +259,9 @@ class E3DCBatteryManager:
                         "key": battery_key,
                         "deviceInfo": deviceInfo,
                         "hasDeviceReportedSoh": has_device_soh,
+                        "temperatureSensorCount": self._get_module_temperature_sensor_count(
+                            dcb_detail
+                        ),
                     }
                     self._batteries.append(battery_entry)
 
@@ -345,6 +356,14 @@ class E3DCBatteryManager:
             if not isinstance(dcb_data, dict):
                 for _, slug in BATTERY_MODULE_RAW_SENSORS:
                     self._mydata[f"{battery['key']}-{slug}"] = None
+                for slug in BATTERY_MODULE_CALCULATED_SENSORS:
+                    self._mydata[f"{battery['key']}-{slug}"] = None
+                for temperature_index in range(
+                    battery.get("temperatureSensorCount", 0)
+                ):
+                    self._mydata[
+                        f"{battery['key']}-temperature-{temperature_index + 1}"
+                    ] = None
                 continue
 
             # Process raw sensor values
@@ -369,6 +388,43 @@ class E3DCBatteryManager:
                 else:
                     calculated_value = None
                 self._mydata[full_key] = calculated_value
+
+            # Process per-cell temperatures for this battery module
+            raw_temperatures = dcb_data.get("temperatures")
+            temperatures: list[float] = []
+            if isinstance(raw_temperatures, (list, tuple)):
+                for temperature in raw_temperatures:
+                    if temperature is None:
+                        continue
+                    try:
+                        temperatures.append(float(temperature))
+                    except (TypeError, ValueError):
+                        continue
+
+            available_temperature_sensors = max(
+                battery.get("temperatureSensorCount", 0), len(temperatures)
+            )
+            battery["temperatureSensorCount"] = available_temperature_sensors
+            for temperature_index in range(available_temperature_sensors):
+                value = (
+                    temperatures[temperature_index]
+                    if temperature_index < len(temperatures)
+                    else None
+                )
+                self._mydata[
+                    f"{battery['key']}-temperature-{temperature_index + 1}"
+                ] = value
+
+            if len(temperatures) > 0:
+                self._mydata[f"{battery['key']}-temperature-min"] = min(temperatures)
+                self._mydata[f"{battery['key']}-temperature-max"] = max(temperatures)
+                self._mydata[f"{battery['key']}-temperature-avg"] = sum(
+                    temperatures
+                ) / len(temperatures)
+            else:
+                self._mydata[f"{battery['key']}-temperature-min"] = None
+                self._mydata[f"{battery['key']}-temperature-max"] = None
+                self._mydata[f"{battery['key']}-temperature-avg"] = None
 
     def _get_dcb_count_from_pack(self, pack: dict[str, Any]) -> int | None:
         """Get the number of DCB modules in a battery pack."""
