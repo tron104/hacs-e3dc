@@ -292,6 +292,9 @@
       "battery-module-soc": {
         "name": "State of charge"
       },
+      "battery-module-cell-temperature": {
+        "name": "Cell temperature {index}"
+      },
       "battery-module-soh": {
         "name": "State of health"
       },

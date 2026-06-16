@@ -880,7 +880,8 @@ BATTERY_PACK_SENSOR_DESCRIPTION_TEMPLATES: dict[str, dict[str, Any]] = {
 }
 
 
-BATTERY_MODULE_CELL_TEMPERATURE_SENSOR_TEMPLATE: dict[str, dict[str, Any] | Any] = {
+BATTERY_MODULE_CELL_TEMPERATURE_SENSOR_TEMPLATE: dict[str, Any] = {
+    "translation_key": "battery-module-cell-temperature",
     "icon": "mdi:thermometer",
     "native_unit_of_measurement": UnitOfTemperature.CELSIUS,
     "device_class": SensorDeviceClass.TEMPERATURE,
@@ -1065,6 +1066,7 @@ async def async_setup_entry(
             description = E3DCSensorEntityDescription(
                 has_entity_name=True,
                 name=f"Cell Temperature {temperature_index + 1}",
+                translation_placeholders={"index": str(temperature_index + 1)},
                 key=f"{battery_key}-temperature-{temperature_index + 1}",
                 **BATTERY_MODULE_CELL_TEMPERATURE_SENSOR_TEMPLATE,
             )

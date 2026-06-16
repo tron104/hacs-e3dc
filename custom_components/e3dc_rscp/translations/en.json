@@ -92,9 +92,9 @@
                 "title": "Discovered E3DC device",
                 "description": "E3DC device {name} has been discovered at IP address {host}.\n\nPlease provide your E3DC credentials to complete the setup.",
                 "data": {
-                "username": "[%key:common::config_flow::data::username%]",
-                "password": "[%key:common::config_flow::data::password%]",
-                "rscpkey": "RSCP encryption key"
+                    "username": "[%key:common::config_flow::data::username%]",
+                    "password": "[%key:common::config_flow::data::password%]",
+                    "rscpkey": "RSCP encryption key"
                 }
             }
         }
@@ -366,6 +366,9 @@
             },
             "battery-module-soh-reported": {
                 "name": "State of health (device-reported)"
+            },
+            "battery-module-cell-temperature": {
+                "name": "Cell temperature {index}"
             },
             "battery-module-status": {
                 "name": "Status code"
